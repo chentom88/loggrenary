@@ -1,4 +1,4 @@
-package app
+package ingestor
 
 import (
 	"fmt"
@@ -12,12 +12,14 @@ type Config struct {
 	KeyPath    string `env:"KEY_PATH"`
 	ShardID    string `env:"SHARD_ID"`
 	LoggrAddr  string `env:"LOGGR_ADDR"`
-	RabbitAddr string `env:"RABBIT_ADDR"`
 }
 
 // LoadConfig reads from the environment to create a Config.
 func LoadConfig() (*Config, error) {
-	config := Config{}
+	config := Config{
+		ShardID: "loggrenary",
+	}
+
 	err := envstruct.Load(&config)
 	if err != nil {
 		return nil, err
@@ -25,10 +27,6 @@ func LoadConfig() (*Config, error) {
 
 	if config.LoggrAddr == "" {
 		return nil, fmt.Errorf("Loggregator address is required")
-	}
-
-	if config.RabbitAddr == "" {
-		return nil, fmt.Errorf("RabbitMQ address is required")
 	}
 
 	return &config, nil

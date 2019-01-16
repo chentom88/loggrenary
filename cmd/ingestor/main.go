@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"os"
 
 	loggregator "code.cloudfoundry.org/go-loggregator"
 	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
-	"code.cloudfoundry.org/loggregator/rlp/app"
+	"github.com/chentom88/loggrenary/internal/ingestor"
 )
 
 var selectors = []*loggregator_v2.Selector{
@@ -37,7 +39,7 @@ var selectors = []*loggregator_v2.Selector{
 }
 
 func main() {
-	config, err := app.LoadConfig()
+	config, err := ingestor.LoadConfig()
 	if err != nil {
 		log.Fatal("Failed to load config", err)
 	}
@@ -52,21 +54,33 @@ func main() {
 		log.Fatal("Failed to get tls config", err)
 	}
 
-	streamConn := loggregator.NewEnvelopeStreamConnector(config.LoggrAddr, tlsConfig)
-	defer streamConn.Close()
+	loggr := log.New(os.Stderr, "[", log.LstdFlags)
+	streamConn := loggregator.NewEnvelopeStreamConnector(
+		config.LoggrAddr,
+		tlsConfig,
+		loggregator.WithEnvelopeStreamLogger(loggr),
+	)
 
 	rx := streamConn.Stream(context.Background(), &loggregator_v2.EgressBatchRequest{
 		ShardId:   config.ShardID,
 		Selectors: selectors,
 	})
 
-	// Set up connection to RabbitMQ
-	rabbitConn, err := amqp.Dial(config.RabbitAddr)
-
+	fmt.Println("Started ingestor")
 	for {
 		batch := rx()
 
 		for _, env := range batch {
+			fmt.Println("%+v \n", env)
 		}
 	}
+	// Set up connection to RabbitMQ
+	// rabbitConn, err := amqp.Dial(config.RabbitAddr)
+
+	// for {
+	// 	batch := rx()
+
+	// 	for _, env := range batch {
+	// 	}
+	// }
 }
